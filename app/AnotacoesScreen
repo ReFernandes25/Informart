@@ -1,0 +1,334 @@
+package com.refernandes.informart
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import java.time.format.DateTimeFormatter
+
+@Composable
+fun AnotacoesScreen(onBackClick: () -> Unit) {
+    val fonteKufam = FontFamily(Font(R.font.kufam))
+
+    var nomeCliente by remember { mutableStateOf("") }
+    var itensCompra by remember { mutableStateOf("") }
+    var valorStr by remember { mutableStateOf("") }
+    var valorPagamentoStr by remember { mutableStateOf("") }
+
+    val valorAtual = valorStr.replace("R$", "").replace(",", ".").trim().toDoubleOrNull() ?: 0.0
+    val valorPagamento = valorPagamentoStr.replace("R$", "").replace(",", ".").trim().toDoubleOrNull() ?: 0.0
+
+    var clientesExpandidos by remember { mutableStateOf(setOf<String>()) }
+
+    val clientesAgrupados = Repositorio.anotacoes.groupBy { it.nomeCliente.trim().lowercase() }
+
+    val clientesOrdenados = clientesAgrupados.entries.sortedBy { entry ->
+        entry.value.firstOrNull()?.nomeCliente ?: ""
+    }
+
+    val formatadorData = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF7D8CC4))
+            .verticalScroll(scrollState)
+    ) {
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF001A57), RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
+                .padding(top = 60.dp, bottom = 20.dp)
+        ) {
+            IconButton(onClick = onBackClick, modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp)) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Voltar", tint = Color.White)
+            }
+            Text("Anotações", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = fonteKufam, modifier = Modifier.align(Alignment.Center))
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        CustomTextField(label = "Nome do Cliente", value = nomeCliente, onValueChange = { nomeCliente = it })
+        Spacer(modifier = Modifier.height(12.dp))
+        CustomTextField(label = "Itens da compra", value = itensCompra, onValueChange = { itensCompra = it })
+        Spacer(modifier = Modifier.height(12.dp))
+        CustomTextField(label = "Valor atual (R$)", value = valorStr, onValueChange = { valorStr = it })
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                if (nomeCliente.isNotBlank() && valorAtual > 0) {
+                    Repositorio.anotacoes.add(
+                        AnotacaoCliente(
+                            nomeCliente = nomeCliente.trim(),
+                            itens = itensCompra,
+                            valor = valorAtual
+                        )
+                    )
+                    itensCompra = ""
+                    valorStr = ""
+                }
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF001A57)),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 80.dp).height(50.dp)
+        ) {
+            Text("SALVAR", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, fontFamily = fonteKufam)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider(color = Color.White.copy(alpha = 0.5f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        val historicoClienteAtual = if (nomeCliente.isNotBlank()) {
+            Repositorio.anotacoes.filter { it.nomeCliente.equals(nomeCliente, ignoreCase = true) }
+        } else emptyList()
+
+        val totalClienteAtual = historicoClienteAtual.sumOf { it.valor }
+
+        if (nomeCliente.isNotBlank() && historicoClienteAtual.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF001A57)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = "Total devido por $nomeCliente", color = Color.White, fontSize = 16.sp, fontFamily = fonteKufam)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "R$ ${String.format("%.2f", totalClienteAtual)}",
+                        color = if (totalClienteAtual <= 0) Color(0xFF4CAF50) else Color(0xFFF5A623),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = fonteKufam
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    CustomTextField(label = "Valor do pagamento parcial (R$)", value = valorPagamentoStr, onValueChange = { valorPagamentoStr = it })
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = {
+                            if (valorPagamento > 0) {
+                                Repositorio.anotacoes.add(
+                                    AnotacaoCliente(
+                                        nomeCliente = nomeCliente.trim(),
+                                        itens = "Pagamento Parcial / Abatimento",
+                                        valor = -valorPagamento
+                                    )
+                                )
+                                valorPagamentoStr = ""
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().height(40.dp)
+                    ) {
+                        Text("REGISTRAR PAGAMENTO", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = fonteKufam)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        Text(
+            text = "Lista de Clientes",
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = fonteKufam,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (clientesOrdenados.isEmpty()) {
+            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                Text(text = "Nenhuma anotação encontrada.", color = Color.White, fontFamily = fonteKufam)
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                for ((chaveLower, listaRegistros) in clientesOrdenados) {
+                    val nomeRealCliente = listaRegistros.firstOrNull()?.nomeCliente ?: chaveLower
+                    val totalDevidoCliente = listaRegistros.sumOf { it.valor }
+                    val isExpandido = clientesExpandidos.contains(chaveLower)
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                clientesExpandidos = if (isExpandido) {
+                                    clientesExpandidos - chaveLower
+                                } else {
+                                    clientesExpandidos + chaveLower
+                                }
+                            },
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF001A57)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            // Cabeçalho do Card Agrupado do Cliente
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = nomeRealCliente,
+                                        color = Color.White,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = fonteKufam
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Total devendo: R$ ${String.format("%.2f", totalDevidoCliente)}",
+                                        color = if (totalDevidoCliente <= 0) Color(0xFF4CAF50) else Color(0xFFF5A623),
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = fonteKufam
+                                    )
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = {
+                                            Repositorio.anotacoes.removeAll(listaRegistros)
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Delete,
+                                            contentDescription = "Excluir Cliente Inteiro",
+                                            tint = Color(0xFFF44336)
+                                        )
+                                    }
+
+                                    Icon(
+                                        imageVector = if (isExpandido) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                        contentDescription = "Expandir",
+                                        tint = Color.White
+                                    )
+                                }
+                            }
+
+                            AnimatedVisibility(visible = isExpandido) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.3f), thickness = 1.dp)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Histórico Detalhado:",
+                                        color = Color.LightGray,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = fonteKufam
+                                    )
+
+                                    for (anotacao in listaRegistros.reversed()) {
+                                        val isPagamento = anotacao.valor < 0
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = CardDefaults.cardColors(containerColor = Color(0xFF0C2B7A)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(12.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    ) {
+                                                        Text(
+                                                            text = anotacao.data.format(formatadorData),
+                                                            color = Color.LightGray,
+                                                            fontSize = 11.sp,
+                                                            fontFamily = fonteKufam
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Text(
+                                                        text = anotacao.itens,
+                                                        color = Color.White,
+                                                        fontSize = 14.sp,
+                                                        fontFamily = fonteKufam
+                                                    )
+                                                    Text(
+                                                        text = if (isPagamento) "Pago: R$ ${String.format("%.2f", -anotacao.valor)}" else "Valor: R$ ${String.format("%.2f", anotacao.valor)}",
+                                                        color = if (isPagamento) Color(0xFF4CAF50) else Color(0xFFF44336),
+                                                        fontSize = 14.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontFamily = fonteKufam,
+                                                        modifier = Modifier.padding(top = 2.dp)
+                                                    )
+                                                }
+
+                                                IconButton(
+                                                    onClick = {
+                                                        Repositorio.anotacoes.removeIf { it.id == anotacao.id }
+                                                    },
+                                                    modifier = Modifier.size(32.dp)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Filled.Delete,
+                                                        contentDescription = "Excluir Item",
+                                                        tint = Color(0xFFF44336),
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(30.dp))
+    }
+}
