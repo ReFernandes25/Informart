@@ -1,0 +1,99 @@
+package com.refernandes.informart
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+@Composable
+fun GastosScreen(onBackClick: () -> Unit) {
+    val fonteKufam = FontFamily(Font(R.font.kufam))
+
+    var tipo by remember { mutableStateOf("") }
+    var item by remember { mutableStateOf("") }
+    var quantidadeStr by remember { mutableStateOf("") }
+    var valorCompraStr by remember { mutableStateOf("") }
+    var valorVendaEstimado by remember { mutableStateOf("") }
+
+    val qtd = quantidadeStr.filter { it.isDigit() }.toDoubleOrNull() ?: 0.0
+    val valCompra = valorCompraStr.replace("R$", "").replace(",", ".").trim().toDoubleOrNull() ?: 0.0
+    val totalGasto = qtd * valCompra
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF7D8CC4))
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(color = Color(0xFF001A57), shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
+                .padding(top = 60.dp, bottom = 20.dp)
+        ) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp)
+            ) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Voltar", tint = Color.White)
+            }
+            Text("Registrar gastos", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = fonteKufam, modifier = Modifier.align(Alignment.Center))
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        CustomTextField(label = "Tipo", value = tipo, onValueChange = { tipo = it })
+        Spacer(modifier = Modifier.height(12.dp))
+        CustomTextField(label = "Item", value = item, onValueChange = { item = it })
+        Spacer(modifier = Modifier.height(12.dp))
+        CustomTextField(label = "Quantidade", value = quantidadeStr, onValueChange = { quantidadeStr = it })
+        Spacer(modifier = Modifier.height(12.dp))
+        CustomTextField(label = "Valor de compra (R$)", value = valorCompraStr, onValueChange = { valorCompraStr = it })
+        Spacer(modifier = Modifier.height(12.dp))
+        CustomTextField(label = "Valor de venda estimado (R$)", value = valorVendaEstimado, onValueChange = { valorVendaEstimado = it })
+
+        Spacer(modifier = Modifier.height(30.dp))
+        
+        Text("Valor total da compra", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = fonteKufam)
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp).border(2.dp, Color.White, RoundedCornerShape(8.dp)).padding(vertical = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("R$ ${String.format("%.2f", totalGasto)}", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = fonteKufam)
+        }
+
+        Spacer(modifier = Modifier.height(30.dp))
+        
+        Button(
+            onClick = {
+                if (item.isNotBlank() && totalGasto > 0) {
+                    Repositorio.gastos.add(Registro(item, "$quantidadeStr und", totalGasto))
+                }
+                onBackClick()
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF001A57)),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 80.dp).height(60.dp)
+        ) {
+            Text("SALVAR", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = fonteKufam)
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
