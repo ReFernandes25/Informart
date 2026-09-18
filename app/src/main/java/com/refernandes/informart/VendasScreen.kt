@@ -1,0 +1,98 @@
+package com.refernandes.informart
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+@Composable
+fun VendasScreen(onBackClick: () -> Unit) {
+    val fonteKufam = FontFamily(Font(R.font.kufam))
+
+    // Variáveis que guardam o que o usuário digita nos campos
+    var item by remember { mutableStateOf("") }
+    var quantidadeStr by remember { mutableStateOf("") }
+    var valorUnitarioStr by remember { mutableStateOf("") }
+
+    // Matemática em tempo real: filtra os textos e calcula o total
+    val qtd = quantidadeStr.filter { it.isDigit() }.toDoubleOrNull() ?: 0.0
+    val valUnit = valorUnitarioStr.replace("R$", "").replace(",", ".").trim().toDoubleOrNull() ?: 0.0
+    val totalVenda = qtd * valUnit
+
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF7D8CC4)), horizontalAlignment = Alignment.CenterHorizontally) {
+
+        // Cabeçalho azul com o botão de Voltar
+        Box(
+            modifier = Modifier.fillMaxWidth().background(Color(0xFF001A57), RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
+                .padding(top = 60.dp, bottom = 20.dp)
+        ) {
+            IconButton(onClick = onBackClick, modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp)) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Voltar", tint = Color.White)
+            }
+            Text("Registrar venda", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = fonteKufam, modifier = Modifier.align(Alignment.Center))
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Campos de texto personalizados
+        CustomTextField(label = "Item", value = item, onValueChange = { item = it })
+        Spacer(modifier = Modifier.height(16.dp))
+        CustomTextField(label = "Quantidade", value = quantidadeStr, onValueChange = { quantidadeStr = it })
+        Spacer(modifier = Modifier.height(16.dp))
+        CustomTextField(label = "Valor unitário (R$)", value = valorUnitarioStr, onValueChange = { valorUnitarioStr = it })
+
+        Spacer(modifier = Modifier.height(40.dp))
+        Text("Valor total da venda", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = fonteKufam)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Caixa que exibe o resultado do cálculo
+        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp).border(2.dp, Color.White, RoundedCornerShape(8.dp)).padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+            Text("R$ ${String.format("%.2f", totalVenda)}", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = fonteKufam)
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Botão Salvar: só salva se houver texto e valor maior que zero
+        Button(
+            onClick = {
+                if (item.isNotBlank() && totalVenda > 0) {
+                    Repositorio.vendas.add(Registro(item, "$quantidadeStr und", totalVenda))
+                }
+                onBackClick()
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF001A57)),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 80.dp).height(60.dp)
+        ) {
+            Text("SALVAR", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = fonteKufam)
+        }
+    }
+}
+
+// Este componente desenha os campos de texto. Fica aqui mas serve para o app todo!
+@Composable
+fun CustomTextField(label: String, value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label, color = Color.White) },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Color.White, unfocusedBorderColor = Color.White,
+            focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Color.White
+        ),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp),
+        singleLine = true
+    )
+}

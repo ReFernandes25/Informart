@@ -1,0 +1,26 @@
+package com.refernandes.informart
+
+import androidx.compose.runtime.mutableStateListOf
+import java.time.LocalDate
+import java.util.UUID
+
+data class Registro(
+    val item: String,
+    val quantidade: String,
+    val valor: Double,
+    val data: LocalDate = LocalDate.now()
+)
+
+data class AnotacaoCliente(
+    val id: String = UUID.randomUUID().toString(), // ID único para cada lançamento
+    val nomeCliente: String,
+    val itens: String,
+    val valor: Double,
+    val data: LocalDate = LocalDate.now()
+)
+
+object Repositorio {
+    val vendas = mutableStateListOf<Registro>()
+    val gastos = mutableStateListOf<Registro>()
+    val anotacoes = mutableStateListOf<AnotacaoCliente>()
+}
